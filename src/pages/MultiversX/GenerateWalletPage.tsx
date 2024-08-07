@@ -1,9 +1,14 @@
-import {Mnemonic} from '@multiversx/sdk-wallet/out'
+import {Mnemonic, UserSecretKey} from '@multiversx/sdk-wallet/out'
 import {Button} from '@telegram-apps/telegram-ui'
-import {FC, useState} from 'react'
+import {FC, useState, useEffect} from 'react'
 import {ClipLoader} from 'react-spinners'
 import {CopyToClipboard} from 'react-copy-to-clipboard'
 import {Fade} from 'react-awesome-reveal'
+import {
+  Decryptor,
+  EncryptedData,
+  Encryptor,
+} from '@multiversx/sdk-wallet/out/crypto'
 
 export const GenerateWallet: FC = () => {
   const [words, setWords] = useState<Array<string>>([])
@@ -11,6 +16,25 @@ export const GenerateWallet: FC = () => {
   const [showWords, setShowWords] = useState<boolean>(false)
   const [copied, setCopied] = useState<boolean>(false)
   const [visible, setVisible] = useState<boolean>(false)
+  const [stored, setStored] = useState<boolean>(false)
+
+  useEffect(() => {
+    const storedWords = localStorage.getItem('mnemonicWords')
+
+    if (storedWords) {
+      const parsedStoredWords = JSON.parse(storedWords)
+
+      const decryptedBuffer: Buffer = Decryptor.decrypt(
+        EncryptedData.fromJSON(parsedStoredWords),
+        import.meta.env.VITE_ENCRYPT_PASSWORD || ''
+      )
+
+      const decryptedWords = decryptedBuffer.toString('utf-8')
+      setWords(decryptedWords.split(' '))
+      setVisible(true)
+      setStored(true)
+    }
+  }, [])
 
   function generateWallet() {
     setLoading(true)
@@ -22,7 +46,6 @@ export const GenerateWallet: FC = () => {
       const mnemonic = Mnemonic.generate()
       const words = mnemonic.getWords()
 
-      console.log(words)
       setWords(words)
       setLoading(false)
       setVisible(true)
@@ -34,12 +57,23 @@ export const GenerateWallet: FC = () => {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const storeToLocalStorage = () => {
+    const encryptedWords = Encryptor.encrypt(
+      Buffer.from(words.join(' ')),
+      import.meta.env.VITE_ENCRYPT_PASSWORD || ''
+    )
+    localStorage.setItem('mnemonicWords', JSON.stringify(encryptedWords))
+    setStored(true)
+  }
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6">
       <h1 className="text-2xl font-bold mb-6 text-center">Hello world!</h1>
-      <Button className="my-4" onClick={generateWallet}>
-        {loading ? <ClipLoader size={20} /> : 'Generate Wallet'}
-      </Button>
+      {!stored && (
+        <Button className="my-4" onClick={generateWallet}>
+          {loading ? <ClipLoader size={20} /> : 'Generate Wallet'}
+        </Button>
+      )}
       {visible && (
         <Fade cascade damping={0.2}>
           <div
@@ -62,6 +96,11 @@ export const GenerateWallet: FC = () => {
               {copied ? 'Copied!' : 'Copy Words'}
             </Button>
           </CopyToClipboard>
+          {!stored && (
+            <Button mode="gray" className="my-2" onClick={storeToLocalStorage}>
+              Save
+            </Button>
+          )}
         </Fade>
       )}
     </div>
