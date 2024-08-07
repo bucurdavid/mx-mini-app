@@ -1,4 +1,4 @@
-import {Mnemonic, UserSecretKey} from '@multiversx/sdk-wallet/out'
+import {Mnemonic} from '@multiversx/sdk-wallet/out'
 import {Button} from '@telegram-apps/telegram-ui'
 import {FC, useState, useEffect} from 'react'
 import {ClipLoader} from 'react-spinners'
