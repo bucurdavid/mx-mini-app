@@ -9,8 +9,11 @@ import {
   EncryptedData,
   Encryptor,
 } from '@multiversx/sdk-wallet/out/crypto'
+import {useHapticFeedback} from '@telegram-apps/sdk-react'
 
 export const GenerateWallet: FC = () => {
+  const {impactOccurred} = useHapticFeedback()
+
   const [words, setWords] = useState<Array<string>>([])
   const [loading, setLoading] = useState<boolean>(false)
   const [showWords, setShowWords] = useState<boolean>(false)
@@ -37,6 +40,7 @@ export const GenerateWallet: FC = () => {
   }, [])
 
   function generateWallet() {
+    impactOccurred('soft')
     setLoading(true)
     setShowWords(false)
     setCopied(false)
