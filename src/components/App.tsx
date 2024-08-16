@@ -16,6 +16,7 @@ import {Navigate, Route, Router, Routes} from 'react-router-dom'
 import {routes} from '@/navigation/routes.tsx'
 import ProtectedRoutes from '@/navigation/protectedRoutes'
 import IntroPage from '@/pages/IntroPage'
+import {ToastContainer} from 'react-toastify'
 
 export const App: FC = () => {
   const lp = useLaunchParams()
@@ -67,6 +68,7 @@ export const App: FC = () => {
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </Router>
+      <ToastContainer />
     </AppRoot>
   )
 }

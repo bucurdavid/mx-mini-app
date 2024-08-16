@@ -1,19 +1,57 @@
-import React, {useState, useEffect, useMemo, FC} from 'react'
-import {motion, AnimatePresence} from 'framer-motion'
-import {useInitData, useLaunchParams} from '@telegram-apps/sdk-react'
+import {useState, useEffect, useMemo, FC} from 'react'
+import {useInitData} from '@telegram-apps/sdk-react'
+import {UserSecretKey, UserSigner} from '@multiversx/sdk-wallet/out'
+import {
+  Account,
+  BigUIntValue,
+  ContractCallPayloadBuilder,
+  ContractFunction,
+  TokenIdentifierValue,
+  Transaction,
+} from '@multiversx/sdk-core/out'
+import {ApiNetworkProvider} from '@multiversx/sdk-network-providers/out'
+import {toast} from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
+import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
+import {faExternalLinkAlt} from '@fortawesome/free-solid-svg-icons'
+
+// Define constants
+const REWARDS_PER_HOUR = 1000
+const END_TIME_IN_MINUTES = 5 // Set end time to 1 minute
 
 const Dashboard: FC = () => {
   const initData = useInitData()
-  const lp = useLaunchParams()
   const [startTime, setStartTime] = useState<Date | null>(null)
   const [endTime, setEndTime] = useState<Date | null>(null)
   const [timeRemaining, setTimeRemaining] = useState<number>(0)
   const [storedWalletAddress, setStoredWalletAddress] = useState<string>('')
+  const [balance, setBalance] = useState<number>(0)
 
   // Retrieve wallet address from localStorage when component mounts
   useEffect(() => {
     const walletAddress = localStorage.getItem('walletAddress') || ''
     setStoredWalletAddress(walletAddress)
+
+    if (walletAddress) {
+      // Fetch the balance
+      (async () => {
+        try {
+          const query = await fetch(
+            `https://devnet-api.multiversx.com/accounts/${walletAddress}/tokens/MINI-9df1bd`
+          )
+
+          if (!query.ok) {
+            throw new Error('Failed to fetch balance')
+          }
+
+          const data = await query.json()
+          setBalance(data?.balance / 10 ** 18 || 0)
+        } catch (error) {
+          console.error('Error fetching balance:', error)
+          setBalance(0) // Set balance to 0 on error
+        }
+      })()
+    }
   }, [])
 
   const userName = useMemo(() => {
@@ -32,7 +70,9 @@ const Dashboard: FC = () => {
       setEndTime(new Date(parseInt(storedEndTime, 10)))
     } else {
       const now = new Date()
-      const newEndTime = new Date(now.getTime() + 2 * 60 * 60 * 1000) // 2 hours from now
+      const newEndTime = new Date(
+        now.getTime() + END_TIME_IN_MINUTES * 60 * 1000
+      ) // Set end time based on the constant
 
       localStorage.setItem('startTime', now.getTime().toString())
       localStorage.setItem('endTime', newEndTime.getTime().toString())
@@ -74,20 +114,65 @@ const Dashboard: FC = () => {
   const calculateRewards = () => {
     if (!startTime || !endTime) return 0
     const elapsedHours = Math.min(
-      2,
+      END_TIME_IN_MINUTES / 60,
       (new Date().getTime() - startTime.getTime()) / (1000 * 60 * 60)
     )
-    return Math.floor(elapsedHours * 1000)
+    return Math.floor(elapsedHours * REWARDS_PER_HOUR)
   }
 
-  const handleClaim = () => {
+  const handleClaim = async () => {
     if (storedWalletAddress) {
-      // Implement airdrop logic here
-      console.log(`Airdropping tokens to ${storedWalletAddress}`)
+      const rewards = calculateRewards()
+      const secret = UserSecretKey.fromString(import.meta.env.VITE_PRIVATE_KEY)
+      const signer = new UserSigner(secret)
 
-      // Reset the times after claiming
+      const apiNetworkProvider = new ApiNetworkProvider(
+        `https://devnet-api.multiversx.com`,
+        {timeout: 10000}
+      )
+
+      const secretAccount = new Account(secret.generatePublicKey().toAddress())
+
+      const secretOnNetwork = await apiNetworkProvider.getAccount(
+        secret.generatePublicKey().toAddress()
+      )
+
+      secretAccount.update(secretOnNetwork)
+
+      const data = new ContractCallPayloadBuilder()
+        .setFunction(new ContractFunction('ESDTTransfer'))
+        .addArg(new TokenIdentifierValue('MINI-9df1bd'))
+        .addArg(new BigUIntValue(rewards * 10 ** 18))
+        .build()
+
+      const sendTx = new Transaction({
+        value: 0,
+        data: data,
+        receiver: storedWalletAddress,
+        gasLimit: 20_000_000,
+        sender: secret.generatePublicKey().toAddress(),
+        chainID: 'D',
+      })
+
+      sendTx.setNonce(secretAccount.nonce)
+
+      const serialized = sendTx.serializeForSigning()
+      const signature = await signer.sign(serialized)
+      sendTx.applySignature(signature)
+
+      await apiNetworkProvider.sendTransaction(sendTx)
+
+      toast.success(`Claimed rewards: ${rewards}`, {
+        position: 'bottom-center',
+        autoClose: 5000,
+      })
+
+      setBalance(balance + rewards)
+
       const now = new Date()
-      const newEndTime = new Date(now.getTime() + 2 * 60 * 60 * 1000) // 2 hours from now
+      const newEndTime = new Date(
+        now.getTime() + END_TIME_IN_MINUTES * 60 * 1000
+      ) // Reset end time based on the constant
 
       localStorage.setItem('startTime', now.getTime().toString())
       localStorage.setItem('endTime', newEndTime.getTime().toString())
@@ -96,6 +181,9 @@ const Dashboard: FC = () => {
     }
   }
 
+  console.log('elapsed percentage: ', getElapsedPercentage())
+  console.log('remaining time: ', timeRemaining)
+
   const greeting = () => {
     const hour = new Date().getHours()
     if (hour < 12) return `Good morning, ${userName}`
@@ -103,7 +191,6 @@ const Dashboard: FC = () => {
     return `Good evening, ${userName}`
   }
 
-  // Format time remaining
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600)
     const minutes = Math.floor((seconds % 3600) / 60)
@@ -144,15 +231,58 @@ const Dashboard: FC = () => {
 
       <button
         onClick={handleClaim}
-        disabled={getElapsedPercentage() < 100}
+        disabled={timeRemaining != 0}
         className={`px-6 py-3 rounded-full text-white font-semibold transition-colors duration-300 ${
-          getElapsedPercentage() < 100
+          timeRemaining != 0
             ? 'bg-gray-500 cursor-not-allowed'
             : 'bg-black hover:bg-gray-800'
         }`}
       >
         Claim
       </button>
+
+      <div>
+        <h1 className="text-1xl font-bold mb-4 mt-20">
+          Your balance is:{' '}
+          {balance.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 18,
+          })}
+          <a
+            href={`https://devnet-api.multiversx.com/accounts/${storedWalletAddress}/tokens/MINI-9df1bd`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-2 text-blue-600 hover:text-blue-800"
+          >
+            <FontAwesomeIcon icon={faExternalLinkAlt} className="ml-1" />
+          </a>
+        </h1>
+
+        <h1 className="text-1xl font-bold mb-4 text-center">
+          Your address is: {storedWalletAddress.slice(0, 6)}...
+          {storedWalletAddress.slice(-4)}
+          <a
+            href={`https://devnet-api.multiversx.com/accounts/${storedWalletAddress}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-2 text-blue-600 hover:text-blue-800"
+          >
+            <FontAwesomeIcon icon={faExternalLinkAlt} className="ml-1" />
+          </a>
+        </h1>
+
+        <p className="text-1xl text-center">
+          Token:{' '}
+          <a
+            className="font-bold"
+            href="https://devnet-explorer.multiversx.com/tokens/MINI-9df1bd"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            MINI-9df1bd
+          </a>
+        </p>
+      </div>
     </div>
   )
 }

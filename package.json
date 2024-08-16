@@ -14,7 +14,10 @@
     "predeploy": "npm run build"
   },
   "dependencies": {
+    "@fortawesome/free-solid-svg-icons": "^6.6.0",
+    "@fortawesome/react-fontawesome": "^0.2.2",
     "@multiversx/sdk-core": "^13.4.0",
+    "@multiversx/sdk-network-providers": "^2.5.0",
     "@multiversx/sdk-wallet": "^4.5.0",
     "@telegram-apps/react-router-integration": "^1.0.0",
     "@telegram-apps/sdk-react": "^1.0.0",
@@ -27,6 +30,7 @@
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.23.0",
     "react-spinners": "^0.14.1",
+    "react-toastify": "^10.0.5",
     "vite-plugin-node-polyfills": "^0.22.0"
   },
   "devDependencies": {
