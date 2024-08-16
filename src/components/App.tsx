@@ -14,6 +14,8 @@ import {type FC, useEffect, useMemo} from 'react'
 import {Navigate, Route, Router, Routes} from 'react-router-dom'
 
 import {routes} from '@/navigation/routes.tsx'
+import ProtectedRoutes from '@/navigation/protectedRoutes'
+import {GenerateWallet} from '@/pages/MultiversX/GenerateWalletPage'
 
 export const App: FC = () => {
   const lp = useLaunchParams()
@@ -52,10 +54,16 @@ export const App: FC = () => {
     >
       <Router location={location} navigator={reactNavigator}>
         <Routes>
-          {routes.map((route) => (
-            <Route key={route.path} {...route} />
-          ))}
-          <Route path="*" element={<Navigate to="/" />} />
+          <Route element={<GenerateWallet />} path="/login" />
+          <Route element={<ProtectedRoutes />}>
+            {routes.map((route) => (
+              <Route
+                path={route.path}
+                key={`route-key-'${route.path}`}
+                element={<route.Component />}
+              />
+            ))}
+          </Route>
         </Routes>
       </Router>
     </AppRoot>
