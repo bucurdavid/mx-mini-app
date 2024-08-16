@@ -15,7 +15,7 @@ import {Navigate, Route, Router, Routes} from 'react-router-dom'
 
 import {routes} from '@/navigation/routes.tsx'
 import ProtectedRoutes from '@/navigation/protectedRoutes'
-import {GenerateWallet} from '@/pages/MultiversX/GenerateWalletPage'
+import IntroPage from '@/pages/IntroPage'
 
 export const App: FC = () => {
   const lp = useLaunchParams()
@@ -54,7 +54,7 @@ export const App: FC = () => {
     >
       <Router location={location} navigator={reactNavigator}>
         <Routes>
-          <Route element={<GenerateWallet />} path="/login" />
+          <Route element={<IntroPage />} path="/intro" />
           <Route element={<ProtectedRoutes />}>
             {routes.map((route) => (
               <Route
@@ -64,6 +64,7 @@ export const App: FC = () => {
               />
             ))}
           </Route>
+          <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </Router>
     </AppRoot>
