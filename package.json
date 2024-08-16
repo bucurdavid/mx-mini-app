@@ -14,6 +14,7 @@
     "predeploy": "npm run build"
   },
   "dependencies": {
+    "@multiversx/sdk-core": "^13.4.0",
     "@multiversx/sdk-wallet": "^4.5.0",
     "@telegram-apps/react-router-integration": "^1.0.0",
     "@telegram-apps/sdk-react": "^1.0.0",
