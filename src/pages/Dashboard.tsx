@@ -12,12 +12,13 @@ import {
 import {ApiNetworkProvider} from '@multiversx/sdk-network-providers/out'
 import {toast} from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
-import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
-import {faExternalLinkAlt} from '@fortawesome/free-solid-svg-icons'
+import {Button, HStack, Link, Progress, VStack} from '@chakra-ui/react'
+import {FaExternalLinkAlt} from 'react-icons/fa'
+import {Text} from '@chakra-ui/react'
 
 // Define constants
 const REWARDS_PER_HOUR = 1000
-const END_TIME_IN_MINUTES = 5 // Set end time to 1 minute
+const END_TIME_IN_MINUTES = 2 // Set end time to 1 minute
 
 const Dashboard: FC = () => {
   const initData = useInitData()
@@ -33,8 +34,7 @@ const Dashboard: FC = () => {
     setStoredWalletAddress(walletAddress)
 
     if (walletAddress) {
-      // Fetch the balance
-      ;(async () => {
+      (async () => {
         try {
           const query = await fetch(
             `https://devnet-api.multiversx.com/accounts/${walletAddress}/tokens/MINI-9df1bd`
@@ -201,95 +201,102 @@ const Dashboard: FC = () => {
   const {hours, minutes, seconds} = formatTime(timeRemaining)
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-white text-black p-6">
-      <h1 className="text-3xl font-bold mb-4">{greeting()}</h1>
-      <div className="text-3xl mb-6">
-        <div className="flex space-x-1">
-          <div className="text-2xl font-bold">
-            {String(hours).padStart(2, '0')}
-          </div>
-          <span className="text-2xl font-bold">:</span>
-          <div className="text-2xl font-bold">
-            {String(minutes).padStart(2, '0')}
-          </div>
-          <span className="text-2xl font-bold">:</span>
-          <div className="text-2xl font-bold">
-            {String(seconds).padStart(2, '0')}
-          </div>
-        </div>
-      </div>
-      <div className="w-full max-w-md mb-6 bg-gray-200 rounded-full h-4 overflow-hidden">
-        <div
-          className="h-full bg-black transition-all duration-1000"
-          style={{width: `${getElapsedPercentage()}%`}}
-        />
-      </div>
-      <div className="text-lg mb-6">Tokens to claim: {calculateRewards()}</div>
-      <button
+    <VStack
+      spacing={6}
+      align="center"
+      justify="center"
+      minH="100vh"
+      bg="white"
+      color="black"
+      p={6}
+    >
+      <Text fontSize="3xl" fontWeight="bold">
+        {greeting()}
+      </Text>
+
+      <HStack spacing={1} fontSize="2xl" fontWeight="bold">
+        <Text>{String(hours).padStart(2, '0')}</Text>
+        <Text>:</Text>
+        <Text>{String(minutes).padStart(2, '0')}</Text>
+        <Text>:</Text>
+        <Text>{String(seconds).padStart(2, '0')}</Text>
+      </HStack>
+
+      <Progress
+        value={getElapsedPercentage()}
+        size="md"
+        colorScheme="blackAlpha"
+        width="full"
+        borderRadius="md"
+      />
+
+      <Text fontSize="lg">Tokens to claim: {calculateRewards()}</Text>
+
+      <Button
         onClick={handleClaim}
-        disabled={timeRemaining != 0}
-        className={`px-6 py-3 rounded-full text-white font-semibold transition-colors duration-300 ${
-          timeRemaining != 0
-            ? 'bg-gray-500 cursor-not-allowed'
-            : 'bg-black hover:bg-gray-800'
-        }`}
+        isDisabled={timeRemaining !== 0}
+        colorScheme={timeRemaining === 0 ? 'teal' : 'gray'}
+        width="full"
       >
         Claim
-      </button>
-      <div>
-        <h1 className="text-1xl font-bold mb-4 mt-20">
-          Your balance is:{' '}
-          {balance.toLocaleString('en-US', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 18,
-          })}
-          <a
+      </Button>
+
+      <VStack align="center" spacing={2} mt={10}>
+        <HStack fontSize="sm" fontWeight="bold">
+          <Text>Your balance is:</Text>
+          <Text>
+            {balance.toLocaleString('en-US', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 18,
+            })}
+          </Text>
+          <Link
             href={`https://devnet-explorer.multiversx.com/accounts/${storedWalletAddress}/tokens/MINI-9df1bd`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ml-2 text-blue-600 hover:text-blue-800"
+            isExternal
+            color="blue.600"
           >
-            <FontAwesomeIcon icon={faExternalLinkAlt} className="ml-1" />
-          </a>
-        </h1>
+            <FaExternalLinkAlt />
+          </Link>
+        </HStack>
 
-        <h1 className="text-1xl font-bold mb-4 text-center">
-          Your address is: {storedWalletAddress.slice(0, 6)}...
-          {storedWalletAddress.slice(-4)}
-          <a
+        <HStack fontSize="sm" fontWeight="bold">
+          <Text>
+            Your address is: {storedWalletAddress.slice(0, 6)}...
+            {storedWalletAddress.slice(-4)}
+          </Text>
+          <Link
             href={`https://devnet-explorer.multiversx.com/accounts/${storedWalletAddress}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ml-2 text-blue-600 hover:text-blue-800"
+            isExternal
+            color="blue.600"
           >
-            <FontAwesomeIcon icon={faExternalLinkAlt} className="ml-1" />
-          </a>
-        </h1>
+            <FaExternalLinkAlt />
+          </Link>
+        </HStack>
 
-        <p className="text-1xl text-center">
-          Token:{' '}
-          <a
-            className="font-bold"
+        <HStack fontSize="sm" fontWeight="bold">
+          <Text>Token:</Text>
+          <Text> MINI-9df1bd</Text>
+          <Link
             href="https://devnet-explorer.multiversx.com/tokens/MINI-9df1bd"
-            target="_blank"
-            rel="noopener noreferrer"
+            isExternal
+            fontWeight="bold"
           >
-            MINI-9df1bd
-          </a>
-        </p>
-      </div>
+            <FaExternalLinkAlt />
+          </Link>
+        </HStack>
+      </VStack>
 
-      <button
+      <Button
         onClick={() => {
           localStorage.clear()
           window.location.reload()
         }}
-        className="px-6 py-3 rounded-full text-white font-semibold bg-red-500 hover:bg-red-800 mt-4"
+        colorScheme="red"
+        mt={4}
       >
-        {' '}
         Reset
-      </button>
-    </div>
+      </Button>
+    </VStack>
   )
 }
 
