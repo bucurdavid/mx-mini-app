@@ -60,7 +60,7 @@ const IntroPage: FC = () => {
   }
 
   return (
-    <Box className="flex items-center justify-center h-screen bg-gray-100 p-4">
+    <Box className="flex items-center justify-center h-screen bg-gray-100 p-4 overflow-hidden">
       <SlideFade in={true} offsetY="20px">
         <Box className="text-center p-6 bg-white rounded-lg shadow-lg max-w-lg w-full">
           {currentSection === 0 && (

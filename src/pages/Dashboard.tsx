@@ -10,9 +10,14 @@ import {
   Transaction,
 } from '@multiversx/sdk-core/out'
 import {ApiNetworkProvider} from '@multiversx/sdk-network-providers/out'
-import {toast} from 'react-toastify'
-import 'react-toastify/dist/ReactToastify.css'
-import {Button, HStack, Link, Progress, VStack} from '@chakra-ui/react'
+import {
+  Button,
+  HStack,
+  Link,
+  Progress,
+  useToast,
+  VStack,
+} from '@chakra-ui/react'
 import {FaExternalLinkAlt} from 'react-icons/fa'
 import {Text} from '@chakra-ui/react'
 
@@ -21,6 +26,7 @@ const REWARDS_PER_HOUR = 1000
 const END_TIME_IN_MINUTES = 2 // Set end time to 1 minute
 
 const Dashboard: FC = () => {
+  const toast = useToast()
   const initData = useInitData()
   const [startTime, setStartTime] = useState<Date | null>(null)
   const [endTime, setEndTime] = useState<Date | null>(null)
@@ -34,7 +40,7 @@ const Dashboard: FC = () => {
     setStoredWalletAddress(walletAddress)
 
     if (walletAddress) {
-      (async () => {
+      ;(async () => {
         try {
           const query = await fetch(
             `https://devnet-api.multiversx.com/accounts/${walletAddress}/tokens/MINI-9df1bd`
@@ -162,9 +168,13 @@ const Dashboard: FC = () => {
 
       await apiNetworkProvider.sendTransaction(sendTx)
 
-      toast.success(`Claimed rewards: ${rewards}`, {
-        position: 'bottom-center',
-        autoClose: 5000,
+      toast({
+        title: 'Success!',
+        description: `Claimed rewards: ${rewards}`,
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+        position: 'bottom',
       })
 
       setBalance(balance + rewards)
