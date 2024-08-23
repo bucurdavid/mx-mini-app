@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
-  "homepage": "https://bucurdavid.github.io/mx-mini-app",
+  "homepage": "https://bucurdavid.github.io/",
   "scripts": {
     "deploy": "gh-pages -d dist",
     "dev": "vite dev",

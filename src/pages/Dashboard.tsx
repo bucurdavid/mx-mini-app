@@ -34,7 +34,7 @@ const Dashboard: FC = () => {
 
     if (walletAddress) {
       // Fetch the balance
-      (async () => {
+      ;(async () => {
         try {
           const query = await fetch(
             `https://devnet-api.multiversx.com/accounts/${walletAddress}/tokens/MINI-9df1bd`
