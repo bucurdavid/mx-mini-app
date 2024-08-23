@@ -244,7 +244,7 @@ const Dashboard: FC = () => {
             maximumFractionDigits: 18,
           })}
           <a
-            href={`https://devnet-api.multiversx.com/accounts/${storedWalletAddress}/tokens/MINI-9df1bd`}
+            href={`https://devnet-explorer.multiversx.com/accounts/${storedWalletAddress}/tokens/MINI-9df1bd`}
             target="_blank"
             rel="noopener noreferrer"
             className="ml-2 text-blue-600 hover:text-blue-800"
@@ -257,7 +257,7 @@ const Dashboard: FC = () => {
           Your address is: {storedWalletAddress.slice(0, 6)}...
           {storedWalletAddress.slice(-4)}
           <a
-            href={`https://devnet-api.multiversx.com/accounts/${storedWalletAddress}`}
+            href={`https://devnet-explorer.multiversx.com/accounts/${storedWalletAddress}`}
             target="_blank"
             rel="noopener noreferrer"
             className="ml-2 text-blue-600 hover:text-blue-800"
