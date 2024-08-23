@@ -1,40 +1,23 @@
 import {Mnemonic} from '@multiversx/sdk-wallet/out'
 import {Button} from '@telegram-apps/telegram-ui'
-import {FC, useState, useEffect} from 'react'
+import {FC, useState} from 'react'
 import {ClipLoader} from 'react-spinners'
 import {CopyToClipboard} from 'react-copy-to-clipboard'
 import {Fade} from 'react-awesome-reveal'
-import {
-  Decryptor,
-  EncryptedData,
-  Encryptor,
-} from '@multiversx/sdk-wallet/out/crypto'
+import {FaEye, FaCopy, FaCheck} from 'react-icons/fa'
 
-export const GenerateWallet: FC = () => {
+interface GenerateWalletProps {
+  onWalletGenerated: (mnemonic: string[], address: string) => void
+}
+
+export const GenerateWallet: FC<GenerateWalletProps> = ({
+  onWalletGenerated,
+}) => {
   const [words, setWords] = useState<Array<string>>([])
   const [loading, setLoading] = useState<boolean>(false)
   const [showWords, setShowWords] = useState<boolean>(false)
   const [copied, setCopied] = useState<boolean>(false)
   const [visible, setVisible] = useState<boolean>(false)
-  const [stored, setStored] = useState<boolean>(false)
-
-  useEffect(() => {
-    const storedWords = localStorage.getItem('mnemonicWords')
-
-    if (storedWords) {
-      const parsedStoredWords = JSON.parse(storedWords)
-
-      const decryptedBuffer: Buffer = Decryptor.decrypt(
-        EncryptedData.fromJSON(parsedStoredWords),
-        import.meta.env.VITE_ENCRYPT_PASSWORD || ''
-      )
-
-      const decryptedWords = decryptedBuffer.toString('utf-8')
-      setWords(decryptedWords.split(' '))
-      setVisible(true)
-      setStored(true)
-    }
-  }, [])
 
   function generateWallet() {
     setLoading(true)
@@ -43,13 +26,26 @@ export const GenerateWallet: FC = () => {
     setVisible(false)
 
     setTimeout(() => {
-      const mnemonic = Mnemonic.generate()
-      const words = mnemonic.getWords()
+      try {
+        const mnemonic = Mnemonic.generate()
+        const words = mnemonic.getWords()
 
-      setWords(words)
-      setLoading(false)
-      setVisible(true)
-    }, 2000) // Simulate async operation
+        const userSecret = mnemonic.deriveKey()
+
+        // Generate the user address from the secret key
+        const userAddress = userSecret.generatePublicKey().toAddress().bech32()
+
+        setWords(words)
+        setLoading(false)
+        setVisible(true)
+
+        // Call the callback with the mnemonic and the user address
+        onWalletGenerated(words, userAddress)
+      } catch (error) {
+        console.error('Error generating wallet:', error)
+        setLoading(false) // Stop loading if an error occurs
+      }
+    }, 2000)
   }
 
   const handleCopy = () => {
@@ -57,50 +53,55 @@ export const GenerateWallet: FC = () => {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const storeToLocalStorage = () => {
-    const encryptedWords = Encryptor.encrypt(
-      Buffer.from(words.join(' ')),
-      import.meta.env.VITE_ENCRYPT_PASSWORD || ''
-    )
-    localStorage.setItem('mnemonicWords', JSON.stringify(encryptedWords))
-    setStored(true)
-  }
-
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-6">
-      <h1 className="text-2xl font-bold mb-6 text-center">Hello world!</h1>
-      {!stored && (
-        <Button className="my-4" onClick={generateWallet}>
-          {loading ? <ClipLoader size={20} /> : 'Generate Wallet'}
-        </Button>
-      )}
+    <div className="flex flex-col items-center justify-center p-4">
+      <Button
+        hidden={words.length > 0}
+        className="my-4 bg-black text-white hover:bg-gray-800"
+        onClick={generateWallet}
+      >
+        {loading ? <ClipLoader size={20} color="white" /> : 'Generate'}
+      </Button>
       {visible && (
         <Fade cascade damping={0.2}>
-          <div
-            className={`my-4 p-2 text-center text-lg ${
-              showWords ? '' : 'blur'
-            }`}
-            style={{filter: showWords ? 'none' : 'blur(5px)'}}
-          >
-            {words.join(' ')}
+          <div className="relative flex flex-col items-center">
+            {/* Mnemonic Words Box */}
+            <div
+              className={`relative p-6 text-center text-lg bg-gray-100 rounded-lg shadow-lg transition-opacity duration-300 ${
+                showWords ? 'blur-none text-black' : 'blur-sm text-gray-500'
+              }`}
+              onClick={() => setShowWords(!showWords)} // Toggle visibility on text click
+              style={{
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                minWidth: '300px',
+              }}
+            >
+              {words.join(' ')}
+            </div>
+
+            {/* Eye Icon - Positioned Over the Text */}
+            {!showWords && (
+              <FaEye
+                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-gray-600 text-2xl cursor-pointer transition-transform hover:scale-110 z-20"
+                onClick={(e) => {
+                  e.stopPropagation() // Prevent the text box click event from firing
+                  setShowWords(!showWords) // Toggle visibility
+                }}
+              />
+            )}
+
+            {/* Copy Icon in Top Right Corner */}
+            <CopyToClipboard text={words.join(' ')} onCopy={handleCopy}>
+              <div className="absolute top-2 right-2 cursor-pointer text-gray-600 hover:text-black transform transition-transform hover:scale-110">
+                {copied ? (
+                  <FaCheck className="text-green-500 animate-bounce" />
+                ) : (
+                  <FaCopy />
+                )}
+              </div>
+            </CopyToClipboard>
           </div>
-          <Button
-            mode="gray"
-            className="my-2"
-            onClick={() => setShowWords(!showWords)}
-          >
-            {showWords ? 'Hide Words' : 'Show Words'}
-          </Button>
-          <CopyToClipboard text={words.join(' ')} onCopy={handleCopy}>
-            <Button sizes="s" mode="gray" className="my-2">
-              {copied ? 'Copied!' : 'Copy Words'}
-            </Button>
-          </CopyToClipboard>
-          {!stored && (
-            <Button mode="gray" className="my-2" onClick={storeToLocalStorage}>
-              Save
-            </Button>
-          )}
         </Fade>
       )}
     </div>

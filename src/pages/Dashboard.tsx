@@ -34,7 +34,7 @@ const Dashboard: FC = () => {
 
     if (walletAddress) {
       // Fetch the balance
-      (async () => {
+      ;(async () => {
         try {
           const query = await fetch(
             `https://devnet-api.multiversx.com/accounts/${walletAddress}/tokens/MINI-9df1bd`
@@ -203,7 +203,6 @@ const Dashboard: FC = () => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-white text-black p-6">
       <h1 className="text-3xl font-bold mb-4">{greeting()}</h1>
-
       <div className="text-3xl mb-6">
         <div className="flex space-x-1">
           <div className="text-2xl font-bold">
@@ -219,16 +218,13 @@ const Dashboard: FC = () => {
           </div>
         </div>
       </div>
-
       <div className="w-full max-w-md mb-6 bg-gray-200 rounded-full h-4 overflow-hidden">
         <div
           className="h-full bg-black transition-all duration-1000"
           style={{width: `${getElapsedPercentage()}%`}}
         />
       </div>
-
       <div className="text-lg mb-6">Tokens to claim: {calculateRewards()}</div>
-
       <button
         onClick={handleClaim}
         disabled={timeRemaining != 0}
@@ -240,7 +236,6 @@ const Dashboard: FC = () => {
       >
         Claim
       </button>
-
       <div>
         <h1 className="text-1xl font-bold mb-4 mt-20">
           Your balance is:{' '}
@@ -283,6 +278,17 @@ const Dashboard: FC = () => {
           </a>
         </p>
       </div>
+
+      <button
+        onClick={() => {
+          localStorage.clear()
+          window.location.reload()
+        }}
+        className="px-6 py-3 rounded-full text-white font-semibold bg-red-500 hover:bg-red-800 mt-4"
+      >
+        {' '}
+        Reset
+      </button>
     </div>
   )
 }

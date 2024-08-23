@@ -1,24 +1,17 @@
 import {FC, useState, useMemo} from 'react'
-import {useInitData, useLaunchParams} from '@telegram-apps/sdk-react'
+import {useInitData} from '@telegram-apps/sdk-react'
 import {motion} from 'framer-motion'
-
-type Platform =
-  | 'android'
-  | 'android_x'
-  | 'ios'
-  | 'macos'
-  | 'tdesktop'
-  | 'unigram'
-  | 'unknown'
-  | 'web'
-  | 'weba'
-  | string
+import {Encryptor} from '@multiversx/sdk-wallet/out/crypto'
+import {GenerateWallet} from './MultiversX/GenerateWalletPage'
 
 const IntroPage: FC = () => {
   const initData = useInitData()
-  const lp = useLaunchParams()
-  const [currentSection, setCurrentSection] = useState(0) // Include an additional section for completion
-  const [formData, setFormData] = useState({walletAddress: ''})
+  const [currentSection, setCurrentSection] = useState(0)
+  const [disclaimerVisible, setDisclaimerVisible] = useState(false)
+  const [formData, setFormData] = useState({
+    walletAddress: '',
+    mnemonic: [] as string[],
+  })
 
   const userName = useMemo(() => {
     if (!initData?.user) return 'User'
@@ -26,28 +19,29 @@ const IntroPage: FC = () => {
     return `${firstName || ''} ${lastName || ''}`.trim() || 'User'
   }, [initData])
 
-  const platform = lp.platform as Platform
-  const appLink =
-    platform === 'ios'
-      ? 'https://apps.apple.com/ro/app/xportal/id1519405832'
-      : platform === 'android'
-      ? 'https://play.google.com/store/apps/details?id=com.elrond.maiar.wallet&hl=ro'
-      : '#'
-
   const handleNext = () => {
+    if (currentSection === 2) {
+      // Show disclaimer modal
+      setDisclaimerVisible(true)
+    } else {
+      setCurrentSection((prevSection) => prevSection + 1)
+    }
+  }
+
+  const handleDisclaimerAcknowledge = () => {
+    const encryptedWords = Encryptor.encrypt(
+      Buffer.from(formData.mnemonic.join(' ')),
+      import.meta.env.VITE_ENCRYPT_PASSWORD || ''
+    )
+    localStorage.setItem('mnemonicWords', JSON.stringify(encryptedWords))
+    localStorage.setItem('walletAddress', formData.walletAddress)
+    localStorage.setItem('hasVisited', 'true')
+    setDisclaimerVisible(false)
     setCurrentSection((prevSection) => prevSection + 1)
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const {name, value} = e.target
-    setFormData((prevData) => ({...prevData, [name]: value}))
-  }
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    localStorage.setItem('walletAddress', formData.walletAddress)
-    localStorage.setItem('hasVisited', 'true')
-    handleNext() // Proceed to the final confirmation section
+  const handleWalletGenerated = (mnemonic: string[], walletAddress: string) => {
+    setFormData({mnemonic, walletAddress})
   }
 
   return (
@@ -111,20 +105,16 @@ const IntroPage: FC = () => {
               animate={{y: 0, opacity: 1}}
               transition={{duration: 0.5, delay: 0.3}}
             >
-              Download Xportal
+              Generate Your Wallet
             </motion.h2>
             <p className="text-gray-700 mb-4">
-              Get the Xportal app from the link below:
+              Generate a new wallet and secure your mnemonic phrase.
             </p>
-            <a
-              href={appLink}
-              className="px-4 py-2 bg-black text-white rounded-lg shadow hover:bg-gray-800"
-            >
-              Download App
-            </a>
+            <GenerateWallet onWalletGenerated={handleWalletGenerated} />
             <button
-              className="px-4 py-2 ml-10 bg-black text-white rounded-lg shadow hover:bg-gray-800"
+              className="px-4 py-2 bg-black text-white rounded-lg shadow hover:bg-gray-800"
               onClick={handleNext}
+              hidden={!formData.mnemonic.length}
             >
               Next
             </button>
@@ -132,39 +122,6 @@ const IntroPage: FC = () => {
         )}
 
         {currentSection === 3 && (
-          <>
-            <motion.h2
-              className="text-2xl font-bold text-gray-900 mb-4"
-              initial={{y: -20, opacity: 0}}
-              animate={{y: 0, opacity: 1}}
-              transition={{duration: 0.5, delay: 0.3}}
-            >
-              Enter Your Wallet Address
-            </motion.h2>
-            <form
-              onSubmit={handleSubmit}
-              className="flex flex-col items-center"
-            >
-              <input
-                type="text"
-                name="walletAddress"
-                value={formData.walletAddress}
-                onChange={handleInputChange}
-                placeholder="Wallet Address"
-                className="px-4 py-2 border rounded-lg w-full mb-4"
-                required
-              />
-              <button
-                type="submit"
-                className="px-4 py-2 bg-black text-white rounded-lg shadow hover:bg-gray-800"
-              >
-                Submit
-              </button>
-            </form>
-          </>
-        )}
-
-        {currentSection === 4 && (
           <motion.div
             initial={{y: -20, opacity: 0}}
             animate={{y: 0, opacity: 1}}
@@ -186,6 +143,28 @@ const IntroPage: FC = () => {
           </motion.div>
         )}
       </motion.div>
+
+      {disclaimerVisible && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              Important Reminder
+            </h2>
+            <p className="text-gray-700 mb-4">
+              Please ensure you have securely copied your mnemonic phrase and
+              stored it in a safe place. This phrase is crucial for accessing
+              your wallet. We are not responsible for any loss of funds due to
+              mismanagement of your mnemonic phrase.
+            </p>
+            <button
+              className="px-4 py-2 bg-black text-white rounded-lg shadow hover:bg-gray-800"
+              onClick={handleDisclaimerAcknowledge}
+            >
+              I Understand
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
