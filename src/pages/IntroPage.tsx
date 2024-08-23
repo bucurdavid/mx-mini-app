@@ -3,6 +3,7 @@ import {useInitData} from '@telegram-apps/sdk-react'
 import {motion} from 'framer-motion'
 import {Encryptor} from '@multiversx/sdk-wallet/out/crypto'
 import {GenerateWallet} from './MultiversX/GenerateWalletPage'
+import {useNavigate} from 'react-router-dom'
 
 const IntroPage: FC = () => {
   const initData = useInitData()
@@ -42,6 +43,12 @@ const IntroPage: FC = () => {
 
   const handleWalletGenerated = (mnemonic: string[], walletAddress: string) => {
     setFormData({mnemonic, walletAddress})
+  }
+
+  const navigate = useNavigate()
+
+  const handleGoHome = () => {
+    navigate('/', {replace: true}) // This will navigate to the root of the app
   }
 
   return (
@@ -136,7 +143,7 @@ const IntroPage: FC = () => {
             </p>
             <button
               className="mt-4 px-4 py-2 bg-black text-white rounded-lg shadow hover:bg-gray-800"
-              onClick={() => (window.location.href = '/')}
+              onClick={handleGoHome}
             >
               Go to Dashboard
             </button>
