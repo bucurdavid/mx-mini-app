@@ -1,9 +1,15 @@
 import {Mnemonic} from '@multiversx/sdk-wallet/out'
-import {Button} from '@telegram-apps/telegram-ui'
 import {FC, useState} from 'react'
-import {ClipLoader} from 'react-spinners'
+import {
+  Box,
+  Button,
+  IconButton,
+  Text,
+  useToast,
+  Fade,
+  Center,
+} from '@chakra-ui/react'
 import {CopyToClipboard} from 'react-copy-to-clipboard'
-import {Fade} from 'react-awesome-reveal'
 import {FaEye, FaCopy, FaCheck} from 'react-icons/fa'
 
 interface GenerateWalletProps {
@@ -18,6 +24,7 @@ export const GenerateWallet: FC<GenerateWalletProps> = ({
   const [showWords, setShowWords] = useState<boolean>(false)
   const [copied, setCopied] = useState<boolean>(false)
   const [visible, setVisible] = useState<boolean>(false)
+  const toast = useToast()
 
   function generateWallet() {
     setLoading(true)
@@ -32,78 +39,100 @@ export const GenerateWallet: FC<GenerateWalletProps> = ({
 
         const userSecret = mnemonic.deriveKey()
 
-        // Generate the user address from the secret key
         const userAddress = userSecret.generatePublicKey().toAddress().bech32()
 
         setWords(words)
         setLoading(false)
         setVisible(true)
 
-        // Call the callback with the mnemonic and the user address
         onWalletGenerated(words, userAddress)
       } catch (error) {
         console.error('Error generating wallet:', error)
-        setLoading(false) // Stop loading if an error occurs
+        setLoading(false)
+        toast({
+          title: 'Error',
+          description: 'Failed to generate wallet. Please try again.',
+          status: 'error',
+          duration: 5000,
+          isClosable: true,
+        })
       }
     }, 2000)
   }
 
   const handleCopy = () => {
     setCopied(true)
+    toast({
+      title: 'Copied',
+      description: 'Mnemonic phrase copied to clipboard.',
+      status: 'success',
+      duration: 2000,
+      isClosable: true,
+    })
     setTimeout(() => setCopied(false), 2000)
   }
 
   return (
-    <div className="flex flex-col items-center justify-center p-4">
-      <Button
-        hidden={words.length > 0}
-        className="my-4 bg-black text-white hover:bg-gray-800"
-        onClick={generateWallet}
-      >
-        {loading ? <ClipLoader size={20} color="white" /> : 'Generate'}
-      </Button>
-      {visible && (
-        <Fade cascade damping={0.2}>
-          <div className="relative flex flex-col items-center">
-            {/* Mnemonic Words Box */}
-            <div
-              className={`relative p-6 text-center text-lg bg-gray-100 rounded-lg shadow-lg transition-opacity duration-300 ${
-                showWords ? 'blur-none text-black' : 'blur-sm text-gray-500'
-              }`}
-              onClick={() => setShowWords(!showWords)} // Toggle visibility on text click
-              style={{
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                minWidth: '300px',
-              }}
+    <Center p={4}>
+      <Box textAlign="center" color={'black'}>
+        <Button
+          isLoading={loading}
+          loadingText="Generating"
+          hidden={words.length > 0}
+          colorScheme="teal"
+          onClick={generateWallet}
+        >
+          Generate Wallet
+        </Button>
+        {visible && (
+          <Fade in={visible}>
+            <Box
+              position="relative"
+              mt={4}
+              p={8}
+              bg="gray.100"
+              rounded="md"
+              boxShadow="lg"
             >
-              {words.join(' ')}
-            </div>
-
-            {/* Eye Icon - Positioned Over the Text */}
-            {!showWords && (
-              <FaEye
-                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-gray-600 text-2xl cursor-pointer transition-transform hover:scale-110 z-20"
-                onClick={(e) => {
-                  e.stopPropagation() // Prevent the text box click event from firing
-                  setShowWords(!showWords) // Toggle visibility
+              <Text
+                pt={4}
+                fontSize="lg"
+                textAlign="center"
+                overflow="hidden"
+                style={{
+                  filter: showWords ? 'none' : 'blur(4px)',
                 }}
-              />
-            )}
-
-            {/* Copy Icon in Top Right Corner */}
-            <CopyToClipboard text={words.join(' ')} onCopy={handleCopy}>
-              <div className="absolute top-2 right-2 cursor-pointer text-gray-600 hover:text-black transform transition-transform hover:scale-110">
-                {copied ? (
-                  <FaCheck className="text-green-500 animate-bounce" />
-                ) : (
-                  <FaCopy />
-                )}
-              </div>
-            </CopyToClipboard>
-          </div>
-        </Fade>
-      )}
-    </div>
+                cursor="pointer"
+                onClick={() => setShowWords(!showWords)}
+              >
+                {words.join(' ')}
+              </Text>
+              {!showWords && (
+                <Center position="absolute" inset={0}>
+                  <IconButton
+                    aria-label="Show mnemonic"
+                    icon={<FaEye />}
+                    onClick={() => setShowWords(true)}
+                    variant="ghost"
+                    fontSize="2xl"
+                    colorScheme="gray"
+                  />
+                </Center>
+              )}
+              <CopyToClipboard text={words.join(' ')} onCopy={handleCopy}>
+                <IconButton
+                  aria-label="Copy mnemonic"
+                  icon={copied ? <FaCheck /> : <FaCopy />}
+                  position="absolute"
+                  top={2}
+                  right={2}
+                  colorScheme={copied ? 'green' : 'teal'}
+                />
+              </CopyToClipboard>
+            </Box>
+          </Fade>
+        )}
+      </Box>
+    </Center>
   )
 }

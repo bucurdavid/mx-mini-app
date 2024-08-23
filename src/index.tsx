@@ -8,5 +8,10 @@ import './mockEnv.ts'
 
 import '@telegram-apps/telegram-ui/dist/styles.css'
 import './index.css'
+import {ChakraProvider} from '@chakra-ui/react'
 
-ReactDOM.createRoot(document.getElementById('root')!).render(<Root />)
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <ChakraProvider>
+    <Root />
+  </ChakraProvider>
+)
