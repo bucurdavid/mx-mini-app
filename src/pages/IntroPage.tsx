@@ -136,7 +136,9 @@ const IntroPage: FC = () => {
             </p>
             <button
               className="mt-4 px-4 py-2 bg-black text-white rounded-lg shadow hover:bg-gray-800"
-              onClick={() => (window.location.href = '/')}
+              onClick={() => {
+                window.location.replace('/')
+              }}
             >
               Go to Dashboard
             </button>
