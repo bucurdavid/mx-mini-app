@@ -20,10 +20,11 @@ import {
 } from '@chakra-ui/react'
 import {FaExternalLinkAlt} from 'react-icons/fa'
 import {Text} from '@chakra-ui/react'
+import BottomMenu from './BottomMenu'
 
 // Define constants
 const REWARDS_PER_HOUR = 1000
-const END_TIME_IN_MINUTES = 2 // Set end time to 1 minute
+const END_TIME_IN_MINUTES = 0.26 // Set end time to 1 minute
 
 const Dashboard: FC = () => {
   const toast = useToast()
@@ -306,6 +307,7 @@ const Dashboard: FC = () => {
       >
         Reset
       </Button>
+      <BottomMenu />
     </VStack>
   )
 }

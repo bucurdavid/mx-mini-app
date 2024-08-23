@@ -4,6 +4,8 @@ import {InitDataPage} from '@/pages/InitDataPage/InitDataPage'
 import {LaunchParamsPage} from '@/pages/LaunchParamsPage/LaunchParamsPage.tsx'
 import {ThemeParamsPage} from '@/pages/ThemeParamsPage/ThemeParamsPage.tsx'
 import Dashboard from '@/pages/Dashboard'
+import QuestPage from '@/pages/Quests'
+import SwapPage from '@/pages/Swap'
 
 interface Route {
   path: string
@@ -17,4 +19,6 @@ export const routes: Route[] = [
   {path: '/init-data', Component: InitDataPage, title: 'Init Data'},
   {path: '/theme-params', Component: ThemeParamsPage, title: 'Theme Params'},
   {path: '/launch-params', Component: LaunchParamsPage, title: 'Launch Params'},
+  {path: '/quests', Component: QuestPage, title: 'Quests'},
+  {path: '/swaps', Component: SwapPage, title: 'Swaps'},
 ]
