@@ -1,6 +1,22 @@
-import {useState, useEffect, useMemo, FC} from 'react'
-import {useInitData} from '@telegram-apps/sdk-react'
-import {UserSecretKey, UserSigner} from '@multiversx/sdk-wallet/out'
+import {
+  Box,
+  Button,
+  Heading,
+  HStack,
+  Link,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
+  Progress,
+  Select,
+  Text,
+  useToast,
+  VStack,
+} from '@chakra-ui/react'
 import {
   Account,
   BigUIntValue,
@@ -10,21 +26,20 @@ import {
   Transaction,
 } from '@multiversx/sdk-core/out'
 import {ApiNetworkProvider} from '@multiversx/sdk-network-providers/out'
-import {
-  Button,
-  HStack,
-  Link,
-  Progress,
-  useToast,
-  VStack,
-} from '@chakra-ui/react'
+import {UserSecretKey, UserSigner} from '@multiversx/sdk-wallet/out'
+import {useInitData} from '@telegram-apps/sdk-react'
+import QRCode from 'qrcode.react'
+import {FC, useEffect, useMemo, useState} from 'react'
 import {FaExternalLinkAlt} from 'react-icons/fa'
-import {Text} from '@chakra-ui/react'
+import multiversx from '../assets/6892.png'
 import BottomMenu from './BottomMenu'
 
 // Define constants
 const REWARDS_PER_HOUR = 1000
 const END_TIME_IN_MINUTES = 0.26 // Set end time to 1 minute
+const defaultTokenIdentifier = 'MINI-9df1bd'
+
+type Token = [string, number]
 
 const Dashboard: FC = () => {
   const toast = useToast()
@@ -34,6 +49,21 @@ const Dashboard: FC = () => {
   const [timeRemaining, setTimeRemaining] = useState<number>(0)
   const [storedWalletAddress, setStoredWalletAddress] = useState<string>('')
   const [balance, setBalance] = useState<number>(0)
+  const [tokenList, setTokenList] = useState<Token[]>([])
+  const [selectedToken, setSelectedToken] = useState(defaultTokenIdentifier)
+
+  const [isSendModalOpen, setIsSendModalOpen] = useState(false)
+  const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false)
+  const [isDepositModalOpen, setIsDepositModalOpen] = useState(false)
+
+  const openSendModal = () => setIsSendModalOpen(true)
+  const closeSendModal = () => setIsSendModalOpen(false)
+
+  const openReceiveModal = () => setIsReceiveModalOpen(true)
+  const closeReceiveModal = () => setIsReceiveModalOpen(false)
+
+  const openDepositModal = () => setIsDepositModalOpen(true)
+  const closeDepositModal = () => setIsDepositModalOpen(false)
 
   // Retrieve wallet address from localStorage when component mounts
   useEffect(() => {
@@ -44,7 +74,7 @@ const Dashboard: FC = () => {
       (async () => {
         try {
           const query = await fetch(
-            `https://devnet-api.multiversx.com/accounts/${walletAddress}/tokens/MINI-9df1bd`
+            `https://devnet-api.multiversx.com/accounts/${walletAddress}/tokens`
           )
 
           if (!query.ok) {
@@ -52,7 +82,20 @@ const Dashboard: FC = () => {
           }
 
           const data = await query.json()
-          setBalance(data?.balance / 10 ** 18 || 0)
+
+          const tokens: Token[] = data.map((token: any) => [
+            token.identifier,
+            token.balance / 10 ** 18 || 0,
+          ])
+
+          setTokenList(tokens)
+
+          const defaultToken = tokens.find(
+            ([identifier]) => identifier === defaultTokenIdentifier
+          )
+          if (defaultToken) {
+            setBalance(defaultToken[1])
+          }
         } catch (error) {
           console.error('Error fetching balance:', error)
           setBalance(0) // Set balance to 0 on error
@@ -61,10 +104,26 @@ const Dashboard: FC = () => {
     }
   }, [])
 
-  const userName = useMemo(() => {
+  const handleTokenChange = (event: any) => {
+    const token = event.target.value
+    setSelectedToken(token)
+
+    const selected = tokenList.find(([identifier]) => identifier === token)
+    if (selected) {
+      setBalance(Number(selected[1]))
+    }
+  }
+
+  // const userName = useMemo(() => {
+  //   if (!initData?.user) return 'User'
+  //   const {firstName, lastName} = initData.user
+  //   return `${firstName || ''} ${lastName || ''}`.trim() || 'User'
+  // }, [initData])
+
+  const tgUsername = useMemo(() => {
     if (!initData?.user) return 'User'
-    const {firstName, lastName} = initData.user
-    return `${firstName || ''} ${lastName || ''}`.trim() || 'User'
+    const {username} = initData.user
+    return username || 'User'
   }, [initData])
 
   // Set start and end time on initial mount
@@ -195,12 +254,12 @@ const Dashboard: FC = () => {
   console.log('elapsed percentage: ', getElapsedPercentage())
   console.log('remaining time: ', timeRemaining)
 
-  const greeting = () => {
-    const hour = new Date().getHours()
-    if (hour < 12) return `Good morning, ${userName}`
-    if (hour < 18) return `Good afternoon, ${userName}`
-    return `Good evening, ${userName}`
-  }
+  // const greeting = () => {
+  //   const hour = new Date().getHours()
+  //   if (hour < 12) return `Good morning, ${userName}`
+  //   if (hour < 18) return `Good afternoon, ${userName}`
+  //   return `Good evening, ${userName}`
+  // }
 
   const formatTime = (seconds: number) => {
     const hours = Math.floor(seconds / 3600)
@@ -213,17 +272,180 @@ const Dashboard: FC = () => {
 
   return (
     <VStack
-      spacing={6}
+      spacing={5}
       align="center"
       justify="center"
-      minH="100vh"
       bg="white"
       color="black"
       p={6}
     >
-      <Text fontSize="3xl" fontWeight="bold">
+      <HStack justifyContent="space-between" width="100%">
+        <Box fontSize="sm" fontWeight="bold">
+          <Text>username: {tgUsername}.tg</Text>
+          <HStack>
+            <Text>
+              address: {storedWalletAddress.slice(0, 6)}...
+              {storedWalletAddress.slice(-4)}
+            </Text>
+            <Link
+              href={`https://devnet-explorer.multiversx.com/accounts/${storedWalletAddress}`}
+              isExternal
+              color="blue.600"
+            >
+              <FaExternalLinkAlt />
+            </Link>
+          </HStack>
+        </Box>
+        <Box>
+          <HStack spacing={1}>
+            <Text color="gray">MultiversX</Text>
+            <img src={multiversx} alt="MultiversX logo" width={20} />
+          </HStack>
+        </Box>
+      </HStack>
+      {/* <Text fontSize="3xl" fontWeight="bold">
         {greeting()}
-      </Text>
+      </Text> */}
+
+      <Box
+        mt={4}
+        p={4}
+        borderRadius="lg"
+        boxShadow="lg"
+        borderWidth="1px"
+        borderColor="gray.200"
+        backgroundColor="gray.50"
+        textAlign="left"
+        position="relative"
+        width="100%"
+        pr="60px"
+      >
+        {/* Token List Dropdown in Top Right Corner */}
+        <Select
+          position="absolute"
+          top={2}
+          right={2}
+          width="auto"
+          bg="white"
+          borderColor="gray.300"
+          size="sm"
+          onChange={handleTokenChange}
+          value={selectedToken} // Controlled component
+        >
+          {tokenList.map(([identifier]) => (
+            <option key={identifier} value={identifier}>
+              {identifier}
+            </option>
+          ))}
+        </Select>
+
+        <Text fontSize="lg" fontWeight="bold" mt={2}>
+          Total Balance
+        </Text>
+        <Text fontSize="2xl" color="green.500" fontWeight="bold" mt={2}>
+          {balance.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 18,
+          })}
+        </Text>
+      </Box>
+
+      <HStack spacing={4}>
+        <Button colorScheme="teal" borderRadius="full" onClick={openSendModal}>
+          Send
+        </Button>
+        <Button
+          colorScheme="teal"
+          borderRadius="full"
+          onClick={openReceiveModal}
+        >
+          Receive
+        </Button>
+        <Button
+          colorScheme="teal"
+          borderRadius="full"
+          onClick={openDepositModal}
+        >
+          Deposit
+        </Button>
+      </HStack>
+
+      {/* Modals */}
+      {/* Send Modal */}
+      <Modal isOpen={isSendModalOpen} onClose={closeSendModal} isCentered>
+        <ModalOverlay backdropFilter="blur(5px)" />
+        <ModalContent>
+          <ModalHeader>Send</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            {/* Content for sending tokens */}
+            <p>Send functionality here...</p>
+          </ModalBody>
+          <ModalFooter>
+            <Button colorScheme="blue" mr={3} onClick={closeSendModal}>
+              Close
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Receive Modal */}
+      <Modal isOpen={isReceiveModalOpen} onClose={closeReceiveModal} isCentered>
+        <ModalOverlay backdropFilter="blur(5px)" />
+        <ModalContent>
+          <ModalHeader>Receive</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <VStack spacing={4} align="center">
+              <QRCode value={storedWalletAddress} size={256} />
+              <Text
+                textAlign="center"
+                wordBreak="break-all"
+                onClick={() => {
+                  navigator.clipboard.writeText(storedWalletAddress)
+                  toast({
+                    title: 'Address copied!',
+                    description:
+                      'Wallet address has been copied to your clipboard.',
+                    status: 'success',
+                    duration: 3000,
+                    isClosable: true,
+                    position: 'bottom-right',
+                  })
+                }}
+              >
+                {storedWalletAddress}
+              </Text>
+            </VStack>
+          </ModalBody>
+          <ModalFooter>
+            <Button colorScheme="blue" mr={3} onClick={closeReceiveModal}>
+              Close
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Deposit Modal */}
+      <Modal isOpen={isDepositModalOpen} onClose={closeDepositModal} isCentered>
+        <ModalOverlay backdropFilter="blur(5px)" />
+        <ModalContent>
+          <ModalHeader>Deposit</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <p>Deposit functionality here...</p>
+          </ModalBody>
+          <ModalFooter>
+            <Button colorScheme="blue" mr={3} onClick={closeDepositModal}>
+              Close
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <Heading textAlign="left" width="100%">
+        Minning
+      </Heading>
 
       <HStack spacing={1} fontSize="2xl" fontWeight="bold">
         <Text>{String(hours).padStart(2, '0')}</Text>
@@ -251,51 +473,6 @@ const Dashboard: FC = () => {
       >
         Claim
       </Button>
-
-      <VStack align="center" spacing={2} mt={10}>
-        <HStack fontSize="sm" fontWeight="bold">
-          <Text>Your balance is:</Text>
-          <Text>
-            {balance.toLocaleString('en-US', {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 18,
-            })}
-          </Text>
-          <Link
-            href={`https://devnet-explorer.multiversx.com/accounts/${storedWalletAddress}/tokens/MINI-9df1bd`}
-            isExternal
-            color="blue.600"
-          >
-            <FaExternalLinkAlt />
-          </Link>
-        </HStack>
-
-        <HStack fontSize="sm" fontWeight="bold">
-          <Text>
-            Your address is: {storedWalletAddress.slice(0, 6)}...
-            {storedWalletAddress.slice(-4)}
-          </Text>
-          <Link
-            href={`https://devnet-explorer.multiversx.com/accounts/${storedWalletAddress}`}
-            isExternal
-            color="blue.600"
-          >
-            <FaExternalLinkAlt />
-          </Link>
-        </HStack>
-
-        <HStack fontSize="sm" fontWeight="bold">
-          <Text>Token:</Text>
-          <Text> MINI-9df1bd</Text>
-          <Link
-            href="https://devnet-explorer.multiversx.com/tokens/MINI-9df1bd"
-            isExternal
-            fontWeight="bold"
-          >
-            <FaExternalLinkAlt />
-          </Link>
-        </HStack>
-      </VStack>
 
       <Button
         onClick={() => {
