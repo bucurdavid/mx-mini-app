@@ -87,8 +87,8 @@ const IntroPage: FC = () => {
                 Orbit Wallet
               </Heading>
               <Text mb={4} color="black">
-                The next generation mini app. Create an account to use crypto
-                and earn <b>$ORB</b>.
+                The next generation telegram wallet of the MultiversX
+                blockchain. Create an account to use crypto and earn <b>$ORB</b>
               </Text>
               <Button colorScheme="teal" onClick={handleNext}>
                 Next
