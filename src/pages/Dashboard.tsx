@@ -39,6 +39,8 @@ const REWARDS_PER_HOUR = 1000
 const END_TIME_IN_MINUTES = 0.26 // Set end time to 1 minute
 const defaultTokenIdentifier = 'ORB-efc633'
 
+const defaultToken: Token = [defaultTokenIdentifier, 0]
+
 type Token = [string, number]
 
 const Dashboard: FC = () => {
@@ -49,7 +51,7 @@ const Dashboard: FC = () => {
   const [timeRemaining, setTimeRemaining] = useState<number>(0)
   const [storedWalletAddress, setStoredWalletAddress] = useState<string>('')
   const [balance, setBalance] = useState<number>(0)
-  const [tokenList, setTokenList] = useState<Token[]>([])
+  const [tokenList, setTokenList] = useState<Token[]>([defaultToken])
   const [selectedToken, setSelectedToken] = useState(defaultTokenIdentifier)
 
   const [isSendModalOpen, setIsSendModalOpen] = useState(false)
@@ -83,21 +85,36 @@ const Dashboard: FC = () => {
 
           const data = await query.json()
 
-          const tokens: Token[] = data.map((token: any) => [
+          let tokens: Token[] = data.map((token: any) => [
             token.identifier,
             token.balance / 10 ** 18 || 0,
           ])
 
+          // If the API returns an empty list or doesn't include the default token, add the default token
+          if (
+            tokens.length === 0 ||
+            !tokens.some(
+              ([identifier]) => identifier === defaultTokenIdentifier
+            )
+          ) {
+            tokens = [...tokens, [defaultTokenIdentifier, 0]]
+          }
+
           setTokenList(tokens)
 
+          // Set the selected token if it's not already set
           const defaultToken = tokens.find(
             ([identifier]) => identifier === defaultTokenIdentifier
           )
           if (defaultToken) {
+            setSelectedToken(defaultTokenIdentifier)
             setBalance(defaultToken[1])
           }
         } catch (error) {
           console.error('Error fetching balance:', error)
+          // Ensure the default token is still shown even on error
+          setTokenList([[defaultTokenIdentifier, 0]])
+          setSelectedToken(defaultTokenIdentifier)
           setBalance(0) // Set balance to 0 on error
         }
       })()
