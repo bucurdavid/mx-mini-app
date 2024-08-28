@@ -1,5 +1,5 @@
 import {FC, useState, useMemo} from 'react'
-import {useInitData} from '@telegram-apps/sdk-react'
+import {initHapticFeedback, useInitData} from '@telegram-apps/sdk-react'
 import {
   Box,
   Button,
@@ -24,6 +24,8 @@ const IntroPage: FC = () => {
     mnemonic: [] as string[],
   })
 
+  const hapticFeedback = initHapticFeedback()
+
   const userName = useMemo(() => {
     if (!initData?.user) return 'User'
     const {firstName, lastName} = initData.user
@@ -32,6 +34,7 @@ const IntroPage: FC = () => {
 
   const handleNext = () => {
     if (currentSection === 2) {
+      hapticFeedback.notificationOccurred('warning')
       onOpen()
     } else {
       setCurrentSection((prevSection) => prevSection + 1)
@@ -43,6 +46,7 @@ const IntroPage: FC = () => {
       Buffer.from(formData.mnemonic.join(' ')),
       import.meta.env.VITE_ENCRYPT_PASSWORD || ''
     )
+
     localStorage.setItem('mnemonicWords', JSON.stringify(encryptedWords))
     localStorage.setItem('walletAddress', formData.walletAddress)
     localStorage.setItem('hasVisited', 'true')

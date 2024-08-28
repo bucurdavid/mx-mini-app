@@ -27,7 +27,7 @@ import {
 } from '@multiversx/sdk-core/out'
 import {ApiNetworkProvider} from '@multiversx/sdk-network-providers/out'
 import {UserSecretKey, UserSigner} from '@multiversx/sdk-wallet/out'
-import {useInitData} from '@telegram-apps/sdk-react'
+import {initHapticFeedback, useInitData} from '@telegram-apps/sdk-react'
 import QRCode from 'qrcode.react'
 import {FC, useEffect, useMemo, useState} from 'react'
 import {FaExternalLinkAlt} from 'react-icons/fa'
@@ -67,13 +67,15 @@ const Dashboard: FC = () => {
   const openDepositModal = () => setIsDepositModalOpen(true)
   const closeDepositModal = () => setIsDepositModalOpen(false)
 
+  const hapticFeedback = initHapticFeedback()
+
   // Retrieve wallet address from localStorage when component mounts
   useEffect(() => {
     const walletAddress = localStorage.getItem('walletAddress') || ''
     setStoredWalletAddress(walletAddress)
 
     if (walletAddress) {
-      ;(async () => {
+      (async () => {
         try {
           const query = await fetch(
             `https://devnet-api.multiversx.com/accounts/${walletAddress}/tokens`
@@ -253,6 +255,7 @@ const Dashboard: FC = () => {
         isClosable: true,
         position: 'bottom',
       })
+      hapticFeedback.impactOccurred('soft')
 
       setBalance(balance + rewards)
 
