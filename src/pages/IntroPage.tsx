@@ -13,6 +13,7 @@ import {Encryptor} from '@multiversx/sdk-wallet/out/crypto'
 import {GenerateWallet} from './MultiversX/GenerateWalletPage'
 import {useNavigate} from 'react-router-dom'
 import {FaExclamationTriangle} from 'react-icons/fa'
+import orbit from '../assets/orbit_logo.png'
 
 const IntroPage: FC = () => {
   const initData = useInitData()
@@ -66,10 +67,13 @@ const IntroPage: FC = () => {
           {currentSection === 0 && (
             <>
               <Heading size="xl" mb={4} color="black">
-                Welcome, {userName}!
+                Welcome to
               </Heading>
+              <Box p={10}>
+                <img src={orbit} alt="Orbit logo" />
+              </Box>
               <Text mb={4} color="black">
-                We’re glad to have you here. Let’s get started!
+                We’re glad to have you here, {userName}. Let’s get started!
               </Text>
               <Button colorScheme="teal" onClick={handleNext}>
                 Get Started
@@ -80,11 +84,11 @@ const IntroPage: FC = () => {
           {currentSection === 1 && (
             <>
               <Heading size="lg" mb={4} color="black">
-                Mini App
+                Orbit Wallet
               </Heading>
               <Text mb={4} color="black">
-                Welcome to MINI app - the next generation Telegram mini app.
-                Create an account to use crypto and earn $MINI.
+                The next generation mini app. Create an account to use crypto
+                and earn <b>$ORB</b>.
               </Text>
               <Button colorScheme="teal" onClick={handleNext}>
                 Next

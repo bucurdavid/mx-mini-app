@@ -37,7 +37,7 @@ import BottomMenu from './BottomMenu'
 // Define constants
 const REWARDS_PER_HOUR = 1000
 const END_TIME_IN_MINUTES = 0.26 // Set end time to 1 minute
-const defaultTokenIdentifier = 'MINI-9df1bd'
+const defaultTokenIdentifier = 'ORB-efc633'
 
 type Token = [string, number]
 
@@ -71,7 +71,7 @@ const Dashboard: FC = () => {
     setStoredWalletAddress(walletAddress)
 
     if (walletAddress) {
-      (async () => {
+      ;(async () => {
         try {
           const query = await fetch(
             `https://devnet-api.multiversx.com/accounts/${walletAddress}/tokens`
@@ -207,7 +207,7 @@ const Dashboard: FC = () => {
 
       const data = new ContractCallPayloadBuilder()
         .setFunction(new ContractFunction('ESDTTransfer'))
-        .addArg(new TokenIdentifierValue('MINI-9df1bd'))
+        .addArg(new TokenIdentifierValue(defaultTokenIdentifier))
         .addArg(new BigUIntValue(rewards * 10 ** 18))
         .build()
 
