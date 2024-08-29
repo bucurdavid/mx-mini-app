@@ -9,7 +9,7 @@ import {
   useDisclosure,
   Slide,
 } from '@chakra-ui/react'
-import {Encryptor} from '@multiversx/sdk-wallet/out/crypto'
+import {EncryptedData, Encryptor} from '@multiversx/sdk-wallet/out/crypto'
 import {GenerateWallet} from './MultiversX/GenerateWalletPage'
 import {useNavigate} from 'react-router-dom'
 import {FaExclamationTriangle} from 'react-icons/fa'
@@ -44,17 +44,21 @@ const IntroPage: FC = () => {
   }
 
   const handleDisclaimerAcknowledge = () => {
-    requestPassword((password) => {
-      const encryptedWords = Encryptor.encrypt(
+    requestPassword(async (password) => {
+      const encryptedWords: EncryptedData = Encryptor.encrypt(
         Buffer.from(formData.mnemonic.join(' ')),
         password
       )
 
-      localStorage.setItem('mnemonicWords', JSON.stringify(encryptedWords))
+      localStorage.setItem(
+        'mnemonicWords',
+        JSON.stringify(encryptedWords.toJSON())
+      )
       localStorage.setItem('walletAddress', formData.walletAddress)
       localStorage.setItem('hasVisited', 'true')
       onClose()
       setCurrentSection((prevSection) => prevSection + 1)
+      return true
     }, 'Set up your password for wallet')
   }
 

@@ -15,33 +15,46 @@ import {
   Select,
   Text,
   useToast,
+  Input,
   VStack,
+  NumberInput,
+  NumberInputField,
+  NumberIncrementStepper,
+  NumberDecrementStepper,
+  NumberInputStepper,
 } from '@chakra-ui/react'
 import {
   Account,
   BigUIntValue,
   ContractCallPayloadBuilder,
   ContractFunction,
+  RelayedTransactionV2Builder,
   TokenIdentifierValue,
   Transaction,
 } from '@multiversx/sdk-core/out'
 import {ApiNetworkProvider} from '@multiversx/sdk-network-providers/out'
-import {UserSecretKey, UserSigner} from '@multiversx/sdk-wallet/out'
-import {initHapticFeedback, useInitData} from '@telegram-apps/sdk-react'
+import {Mnemonic, UserSecretKey, UserSigner} from '@multiversx/sdk-wallet/out'
+import {
+  initHapticFeedback,
+  initQRScanner,
+  useInitData,
+} from '@telegram-apps/sdk-react'
 import QRCode from 'qrcode.react'
 import {FC, useEffect, useMemo, useState} from 'react'
 import {FaExternalLinkAlt} from 'react-icons/fa'
 import multiversx from '../assets/6892.png'
 import BottomMenu from './BottomMenu'
+import {usePasswordPrompt} from './wrappers/PasswordPromtComponent'
+import {Decryptor, EncryptedData} from '@multiversx/sdk-wallet/out/crypto'
 
 // Define constants
 const REWARDS_PER_HOUR = 1000
 const END_TIME_IN_MINUTES = 0.26 // Set end time to 1 minute
 const defaultTokenIdentifier = 'ORB-efc633'
 
-const defaultToken: Token = [defaultTokenIdentifier, 0]
+const defaultToken: Token = [defaultTokenIdentifier, 0, 18]
 
-type Token = [string, number]
+type Token = [string, number, number]
 
 const Dashboard: FC = () => {
   const toast = useToast()
@@ -69,6 +82,122 @@ const Dashboard: FC = () => {
 
   const hapticFeedback = initHapticFeedback()
 
+  const {requestPassword, PasswordPromptComponent} = usePasswordPrompt() // Use the hook
+
+  const [recipientAddress, setRecipientAddress] = useState('')
+  const [amountToSend, setAmountToSend] = useState(0)
+
+  const handleSend = async () => {
+    let userSecret
+    let userSigner
+    requestPassword(async (password) => {
+      const mnemonicEncrypted = EncryptedData.fromJSON(
+        JSON.parse(localStorage.getItem('mnemonicWords') || '')
+      )
+      try {
+        try {
+          const mnemonic = Mnemonic.fromString(
+            Decryptor.decrypt(mnemonicEncrypted, password).toString()
+          )
+          userSecret = mnemonic.deriveKey()
+
+          userSigner = new UserSigner(userSecret)
+        } catch (e) {
+          return false
+        }
+
+        closeSendModal()
+        const apiNetworkProvider = new ApiNetworkProvider(
+          `https://devnet-api.multiversx.com`,
+          {timeout: 10000}
+        )
+
+        const userSecretAccount = new Account(
+          userSecret.generatePublicKey().toAddress()
+        )
+
+        const userSecretOnNetwork = await apiNetworkProvider.getAccount(
+          userSecret.generatePublicKey().toAddress()
+        )
+
+        userSecretAccount.update(userSecretOnNetwork)
+
+        const tokenDecimals =
+          tokenList.find((token) => token[0] === selectedToken)?.[2] || 18
+
+        const data = new ContractCallPayloadBuilder()
+          .setFunction(new ContractFunction('ESDTTransfer'))
+          .addArg(new TokenIdentifierValue(selectedToken))
+          .addArg(new BigUIntValue(amountToSend * 10 ** tokenDecimals))
+          .build()
+
+        const innerTx = new Transaction({
+          value: 0,
+          data: data,
+          receiver: recipientAddress,
+          gasLimit: 0,
+          sender: userSecret.generatePublicKey().toAddress(),
+          chainID: 'D',
+        })
+
+        innerTx.setNonce(userSecretAccount.nonce)
+
+        const serialized = innerTx.serializeForSigning()
+        const signature = await userSigner.sign(serialized)
+        innerTx.applySignature(signature)
+
+        const secret = UserSecretKey.fromString(
+          import.meta.env.VITE_PRIVATE_KEY
+        )
+        const signer = new UserSigner(secret)
+
+        const secretAccount = new Account(
+          secret.generatePublicKey().toAddress()
+        )
+
+        const secretOnNetwork = await apiNetworkProvider.getAccount(
+          secret.generatePublicKey().toAddress()
+        )
+
+        secretAccount.update(secretOnNetwork)
+
+        const networkConfig = await apiNetworkProvider.getNetworkConfig()
+
+        const relayedTx = new RelayedTransactionV2Builder()
+          .setInnerTransaction(innerTx)
+          .setInnerTransactionGasLimit(20_000_000)
+          .setRelayerAddress(secret.generatePublicKey().toAddress())
+          .setRelayerNonce(secretAccount.nonce)
+          .setNetworkConfig(networkConfig)
+          .build()
+
+        const serializedRelayedTx = relayedTx.serializeForSigning()
+        const signatureRelayedTx = await signer.sign(serializedRelayedTx)
+        relayedTx.applySignature(signatureRelayedTx)
+
+        await apiNetworkProvider.sendTransaction(relayedTx)
+
+        toast({
+          title: 'Success!',
+          description: `Sent ${amountToSend} ${selectedToken} to ${recipientAddress.slice(
+            0,
+            3
+          )}...${recipientAddress.slice(-3)}`,
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
+          position: 'bottom',
+        })
+
+        setBalance(balance - amountToSend)
+
+        return true
+      } catch (e) {
+        return false
+      }
+    }, 'Enter your password')
+  }
+
   // Retrieve wallet address from localStorage when component mounts
   useEffect(() => {
     const walletAddress = localStorage.getItem('walletAddress') || ''
@@ -90,6 +219,7 @@ const Dashboard: FC = () => {
           let tokens: Token[] = data.map((token: any) => [
             token.identifier,
             token.balance / 10 ** 18 || 0,
+            token.decimals,
           ])
 
           // If the API returns an empty list or doesn't include the default token, add the default token
@@ -99,7 +229,7 @@ const Dashboard: FC = () => {
               ([identifier]) => identifier === defaultTokenIdentifier
             )
           ) {
-            tokens = [...tokens, [defaultTokenIdentifier, 0]]
+            tokens = [...tokens, [defaultTokenIdentifier, 0, 18]]
           }
 
           setTokenList(tokens)
@@ -115,7 +245,7 @@ const Dashboard: FC = () => {
         } catch (error) {
           console.error('Error fetching balance:', error)
           // Ensure the default token is still shown even on error
-          setTokenList([[defaultTokenIdentifier, 0]])
+          setTokenList([[defaultTokenIdentifier, 0, 18]])
           setSelectedToken(defaultTokenIdentifier)
           setBalance(0) // Set balance to 0 on error
         }
@@ -290,6 +420,9 @@ const Dashboard: FC = () => {
 
   const {hours, minutes, seconds} = formatTime(timeRemaining)
 
+  const format = (val: any) => +val
+  const parse = (val: any) => val.replace(/^\$/, '')
+
   return (
     <VStack
       spacing={5}
@@ -398,15 +531,59 @@ const Dashboard: FC = () => {
           <ModalHeader>Send</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            {/* Content for sending tokens */}
-            <p>Send functionality here...</p>
+            <Text>Token: {selectedToken}</Text>
+            <Text>Balance: {balance}</Text>
+            <Input
+              placeholder="Recipient Address"
+              variant="filled"
+              value={recipientAddress}
+              onChange={(e) => setRecipientAddress(e.target.value)}
+              my={4}
+            />
+            <Button
+              colorScheme="teal"
+              my={4}
+              onClick={async () => {
+                try {
+                  const qrScanner = initQRScanner()
+                  const scannedContent =
+                    (await qrScanner.open('Scan QR code')) || ''
+                  console.log(scannedContent) // Log the scanned content for debugging
+                  hapticFeedback.selectionChanged()
+                  // Assuming the scanned content is the token you want to set
+                  setRecipientAddress(scannedContent)
+                } catch (error) {
+                  hapticFeedback.notificationOccurred('error')
+                  console.error('QR Scan failed', error)
+                }
+              }}
+            >
+              Scan QR Code
+            </Button>
+            <NumberInput
+              onChange={(valueString) => setAmountToSend(parse(valueString))}
+              value={format(amountToSend)}
+              max={balance}
+              defaultValue={0}
+              precision={2}
+              step={0.2}
+              min={0}
+            >
+              <NumberInputField />
+              <NumberInputStepper>
+                <NumberIncrementStepper />
+                <NumberDecrementStepper />
+              </NumberInputStepper>
+            </NumberInput>
           </ModalBody>
           <ModalFooter>
-            <Button colorScheme="blue" mr={3} onClick={closeSendModal}>
-              Close
+            <Button colorScheme="blue" mr={3} onClick={handleSend}>
+              Send
             </Button>
+            <Button onClick={closeSendModal}>Close</Button>
           </ModalFooter>
         </ModalContent>
+        {PasswordPromptComponent}
       </Modal>
 
       {/* Receive Modal */}

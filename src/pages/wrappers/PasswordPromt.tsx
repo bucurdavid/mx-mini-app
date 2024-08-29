@@ -1,4 +1,4 @@
-import React, {useState} from 'react'
+import React, {useEffect, useState} from 'react'
 import {
   Box,
   Button,
@@ -16,20 +16,27 @@ import {initHapticFeedback} from '@telegram-apps/sdk-react'
 interface PasswordPromptProps {
   onComplete: (password: string) => void
   onClose: () => void
-  description: string // Add a description prop for custom text
+  description: string
+  resetPasswordTrigger?: boolean
 }
 
 const PasswordPrompt: React.FC<PasswordPromptProps> = ({
   onComplete,
   onClose,
   description,
+  resetPasswordTrigger,
 }) => {
   const [password, setPassword] = useState('')
-
   const hapticFeedback = initHapticFeedback()
 
+  useEffect(() => {
+    if (resetPasswordTrigger) {
+      setPassword('') // Reset password when trigger is true
+    }
+  }, [resetPasswordTrigger])
+
   const handleNumberClick = (num: number) => {
-    if (password.length < 4 || password.length < 6) {
+    if (password.length < 6) {
       hapticFeedback.impactOccurred('soft')
       setPassword((prev) => prev + num)
     }
@@ -40,17 +47,13 @@ const PasswordPrompt: React.FC<PasswordPromptProps> = ({
     setPassword((prev) => prev.slice(0, -1))
   }
 
-  const handleComplete = () => {
-    hapticFeedback.notificationOccurred('success')
+  const handleSubmit = () => {
     if (password.length === 4 || password.length === 6) {
+      hapticFeedback.notificationOccurred('success')
       onComplete(password)
-      handleClose()
+    } else {
+      hapticFeedback.notificationOccurred('error')
     }
-  }
-
-  const handleClose = () => {
-    setPassword('')
-    onClose()
   }
 
   return (
@@ -95,7 +98,7 @@ const PasswordPrompt: React.FC<PasswordPromptProps> = ({
           </Box>
         </ModalBody>
         <ModalFooter justifyContent="center">
-          <Button colorScheme="teal" size="lg" onClick={handleComplete}>
+          <Button colorScheme="teal" size="lg" onClick={handleSubmit}>
             Enter
           </Button>
         </ModalFooter>
