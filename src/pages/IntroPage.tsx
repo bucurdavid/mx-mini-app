@@ -14,6 +14,7 @@ import {GenerateWallet} from './MultiversX/GenerateWalletPage'
 import {useNavigate} from 'react-router-dom'
 import {FaExclamationTriangle} from 'react-icons/fa'
 import orbit from '../assets/orbit_logo.png'
+import {usePasswordPrompt} from './wrappers/PasswordPromtComponent'
 
 const IntroPage: FC = () => {
   const initData = useInitData()
@@ -25,6 +26,7 @@ const IntroPage: FC = () => {
   })
 
   const hapticFeedback = initHapticFeedback()
+  const {requestPassword, PasswordPromptComponent} = usePasswordPrompt() // Use the hook
 
   const userName = useMemo(() => {
     if (!initData?.user) return 'User'
@@ -42,16 +44,18 @@ const IntroPage: FC = () => {
   }
 
   const handleDisclaimerAcknowledge = () => {
-    const encryptedWords = Encryptor.encrypt(
-      Buffer.from(formData.mnemonic.join(' ')),
-      import.meta.env.VITE_ENCRYPT_PASSWORD || ''
-    )
+    requestPassword((password) => {
+      const encryptedWords = Encryptor.encrypt(
+        Buffer.from(formData.mnemonic.join(' ')),
+        password
+      )
 
-    localStorage.setItem('mnemonicWords', JSON.stringify(encryptedWords))
-    localStorage.setItem('walletAddress', formData.walletAddress)
-    localStorage.setItem('hasVisited', 'true')
-    onClose()
-    setCurrentSection((prevSection) => prevSection + 1)
+      localStorage.setItem('mnemonicWords', JSON.stringify(encryptedWords))
+      localStorage.setItem('walletAddress', formData.walletAddress)
+      localStorage.setItem('hasVisited', 'true')
+      onClose()
+      setCurrentSection((prevSection) => prevSection + 1)
+    }, 'Set up your password for wallet')
   }
 
   const handleWalletGenerated = (mnemonic: string[], walletAddress: string) => {
@@ -135,7 +139,6 @@ const IntroPage: FC = () => {
           )}
         </Box>
       </SlideFade>
-
       <Slide direction="bottom" in={disclaimerVisible}>
         <Box
           p={12}
@@ -160,6 +163,7 @@ const IntroPage: FC = () => {
           </Button>
         </Box>
       </Slide>
+      {PasswordPromptComponent} {/* Render the password prompt */}
     </Box>
   )
 }
